@@ -46,6 +46,31 @@ Route::get('/db-seed', function () {
     }
 });
 
+Route::get('/git', function () {
+    try {
+        $basePath = base_path();
+
+        $status  = shell_exec("cd \"{$basePath}\" && git status 2>&1");
+        $branch  = shell_exec("cd \"{$basePath}\" && git rev-parse --abbrev-ref HEAD 2>&1");
+        $log     = shell_exec("cd \"{$basePath}\" && git log --oneline -10 2>&1");
+        $remote  = shell_exec("cd \"{$basePath}\" && git remote -v 2>&1");
+
+        return response()->json([
+            'status'        => 'success',
+            'branch'        => trim($branch ?? 'unknown'),
+            'git_status'    => $status,
+            'recent_commits'=> $log,
+            'remotes'       => $remote,
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Failed to get git info',
+            'error'   => $e->getMessage()
+        ]);
+    }
+});
+
 Route::get('/clear-cache', function () {
     try {
         \Illuminate\Support\Facades\Artisan::call('optimize:clear');
