@@ -113,7 +113,7 @@ Route::get('/git', function () {
     }
 });
 
-Route::get('/clear-cache1', function () {
+Route::get('/clear-cache', function () {
     try {
         \Illuminate\Support\Facades\Artisan::call('optimize:clear');
         return response()->json([
