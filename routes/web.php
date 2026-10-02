@@ -46,6 +46,48 @@ Route::get('/db-seed', function () {
     }
 });
 
+// ─────────────────────────────────────────────
+// Auto-deploy webhook — called by GitHub on push
+// POST /deploy?token=YOUR_SECRET_TOKEN
+// ─────────────────────────────────────────────
+Route::post('/deploy', function (\Illuminate\Http\Request $request) {
+
+    // 1. Simple token auth (set DEPLOY_SECRET in your .env)
+    $secret = env('DEPLOY_SECRET', 'change-me-please');
+    if ($request->query('token') !== $secret) {
+        return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
+    }
+
+    $basePath = base_path();
+    $output   = [];
+
+    // 2. Pull latest code
+    $output['git_pull'] = shell_exec("cd \"{$basePath}\" && git pull origin HEAD 2>&1");
+
+    // 3. Install / update composer dependencies (no dev on production)
+    $output['composer'] = shell_exec("cd \"{$basePath}\" && composer install --no-dev --optimize-autoloader 2>&1");
+
+    // 4. Run migrations
+    \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+    $output['migrate'] = \Illuminate\Support\Facades\Artisan::output();
+
+    // 5. Clear & re-cache config/routes/views
+    \Illuminate\Support\Facades\Artisan::call('optimize:clear');
+    $output['cache_clear'] = \Illuminate\Support\Facades\Artisan::output();
+
+    \Illuminate\Support\Facades\Artisan::call('config:cache');
+    \Illuminate\Support\Facades\Artisan::call('route:cache');
+    \Illuminate\Support\Facades\Artisan::call('view:cache');
+    $output['cache'] = 'config + route + view cached';
+
+    return response()->json([
+        'status'    => 'success',
+        'message'   => 'Deployment completed!',
+        'timestamp' => now()->toDateTimeString(),
+        'output'    => $output,
+    ]);
+});
+
 Route::get('/git', function () {
     try {
         $basePath = base_path();

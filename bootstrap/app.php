@@ -12,7 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        // Exclude the deploy webhook from CSRF — GitHub POSTs to it externally
+        $middleware->validateCsrfTokens(except: [
+            '/deploy',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
