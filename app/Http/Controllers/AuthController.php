@@ -56,7 +56,6 @@ class AuthController extends Controller
         return response()->json([
             'token' => $token,
             'token_type' => 'Bearer',
-            'is_admin' => $user->email === 'admin@plantriponline.com',
             'user' => $user
         ]);
     }
