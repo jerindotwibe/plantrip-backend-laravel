@@ -59,7 +59,7 @@ Route::post('/deploy', function (\Illuminate\Http\Request $request) {
     }
 
     $basePath = base_path();
-    $output   = [];
+    $output = [];
 
     // 2. Pull latest code
     $output['git_pull'] = shell_exec("cd \"{$basePath}\" && git pull origin HEAD 2>&1");
@@ -81,10 +81,10 @@ Route::post('/deploy', function (\Illuminate\Http\Request $request) {
     $output['cache'] = 'config + route + view cached';
 
     return response()->json([
-        'status'    => 'success',
-        'message'   => 'Deployment completed!',
+        'status' => 'success',
+        'message' => 'Deployment completed!',
         'timestamp' => now()->toDateTimeString(),
-        'output'    => $output,
+        'output' => $output,
     ]);
 });
 
@@ -92,28 +92,28 @@ Route::get('/git', function () {
     try {
         $basePath = base_path();
 
-        $status  = shell_exec("cd \"{$basePath}\" && git status 2>&1");
-        $branch  = shell_exec("cd \"{$basePath}\" && git rev-parse --abbrev-ref HEAD 2>&1");
-        $log     = shell_exec("cd \"{$basePath}\" && git log --oneline -10 2>&1");
-        $remote  = shell_exec("cd \"{$basePath}\" && git remote -v 2>&1");
+        $status = shell_exec("cd \"{$basePath}\" && git status 2>&1");
+        $branch = shell_exec("cd \"{$basePath}\" && git rev-parse --abbrev-ref HEAD 2>&1");
+        $log = shell_exec("cd \"{$basePath}\" && git log --oneline -10 2>&1");
+        $remote = shell_exec("cd \"{$basePath}\" && git remote -v 2>&1");
 
         return response()->json([
-            'status'        => 'success',
-            'branch'        => trim($branch ?? 'unknown'),
-            'git_status'    => $status,
-            'recent_commits'=> $log,
-            'remotes'       => $remote,
+            'status' => 'success',
+            'branch' => trim($branch ?? 'unknown'),
+            'git_status' => $status,
+            'recent_commits' => $log,
+            'remotes' => $remote,
         ]);
     } catch (\Exception $e) {
         return response()->json([
-            'status'  => 'error',
+            'status' => 'error',
             'message' => 'Failed to get git info',
-            'error'   => $e->getMessage()
+            'error' => $e->getMessage()
         ]);
     }
 });
 
-Route::get('/clear-cache', function () {
+Route::get('/clear-cache1', function () {
     try {
         \Illuminate\Support\Facades\Artisan::call('optimize:clear');
         return response()->json([
