@@ -6,6 +6,25 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/create-admin', function () {
+    $user = \App\Models\User::firstOrCreate(
+        ['email' => 'admin@plantriponline.com'],
+        [
+            'name'     => 'Admin',
+            'country'  => 'India',
+            'phone'    => '0000000000',
+            'password' => \Illuminate\Support\Facades\Hash::make('plantrip@123'),
+        ]
+    );
+
+    return response()->json([
+        'status'  => $user->wasRecentlyCreated ? 'created' : 'already_exists',
+        'message' => $user->wasRecentlyCreated ? 'Admin user created!' : 'Admin already exists.',
+        'email'   => $user->email,
+    ]);
+});
+
+
 Route::get('/storage-link', function () {
     $targetFolder = storage_path('app/public');
     $linkFolder = $_SERVER['DOCUMENT_ROOT'] . '/storage';
