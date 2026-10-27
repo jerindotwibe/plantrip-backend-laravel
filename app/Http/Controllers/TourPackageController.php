@@ -9,6 +9,54 @@ use Illuminate\Http\Request;
 class TourPackageController extends Controller
 {
     /**
+     * GET /api/tour-packages or GET /api/packages
+     * List all tour packages across countries with optional filters.
+     */
+    public function index(Request $request)
+    {
+        $query = TourPackage::where('is_active', true)
+            ->with(['country:id,name,slug,currency']);
+
+        if ($request->filled('country')) {
+            $query->whereHas('country', function ($q) use ($request) {
+                $q->where('slug', $request->country)
+                  ->orWhere('name', 'like', "%{$request->country}%");
+            });
+        }
+
+        if ($request->boolean('featured') || $request->input('featured') === '1') {
+            $query->where('is_featured', true);
+        }
+
+        if ($request->filled('duration')) {
+            $query->where('duration_days', $request->duration);
+        }
+        if ($request->filled('type')) {
+            $query->where('badge', 'like', '%' . $request->type . '%');
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('subtitle', 'like', "%{$search}%");
+            });
+        }
+
+        $sort = $request->get('sort', 'popular');
+        match ($sort) {
+            'price_asc'  => $query->orderBy('price', 'asc'),
+            'price_desc' => $query->orderBy('price', 'desc'),
+            default      => $query->orderBy('title', 'asc'),
+        };
+
+        $limit = $request->get('limit', null);
+        $packages = $limit ? $query->limit((int) $limit)->get() : $query->get();
+
+        return response()->json($packages);
+    }
+
+    /**
      * GET /api/countries/{slug}/tour-packages
      * List tour packages for a country with optional filters.
      */
@@ -52,7 +100,7 @@ class TourPackageController extends Controller
     // ─── Admin Routes ──────────────────────────────────────────────────────────
 
     /** GET /api/admin/tour-packages */
-    public function index()
+    public function adminIndex()
     {
         return response()->json(
             TourPackage::with('country:id,name,slug')->orderBy('title')->get()
@@ -79,6 +127,7 @@ class TourPackageController extends Controller
             'highlights'      => 'nullable|array',
             'terms'           => 'nullable|string',
             'is_active'       => 'boolean',
+            'is_featured'     => 'boolean',
         ]);
 
         $package = TourPackage::create($validated);
@@ -105,6 +154,7 @@ class TourPackageController extends Controller
             'highlights'      => 'nullable|array',
             'terms'           => 'nullable|string',
             'is_active'       => 'boolean',
+            'is_featured'     => 'boolean',
         ]);
 
         $package->update($validated);

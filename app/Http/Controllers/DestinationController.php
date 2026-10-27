@@ -9,6 +9,40 @@ use Illuminate\Http\Request;
 class DestinationController extends Controller
 {
     /**
+     * GET /api/destinations
+     * List all destinations across countries with optional filters.
+     */
+    public function index(Request $request)
+    {
+        $query = Destination::where('is_active', true)
+            ->with(['country:id,name,slug,currency']);
+
+        if ($request->filled('country')) {
+            $query->whereHas('country', function ($q) use ($request) {
+                $q->where('slug', $request->country)
+                  ->orWhere('name', 'like', "%{$request->country}%");
+            });
+        }
+
+        if ($request->boolean('featured') || $request->input('featured') === '1') {
+            $query->where('is_featured', true);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        $limit = $request->get('limit', null);
+        $destinations = $limit ? $query->limit((int) $limit)->get() : $query->get();
+
+        return response()->json($destinations);
+    }
+
+    /**
      * GET /api/countries/{slug}/destinations
      * List all active destinations for a country.
      */
@@ -59,6 +93,7 @@ class DestinationController extends Controller
             'description'     => 'nullable|string',
             'highlights'      => 'nullable|array',
             'is_active'       => 'boolean',
+            'is_featured'     => 'boolean',
         ]);
 
         $destination = Destination::create($validated);
@@ -81,6 +116,7 @@ class DestinationController extends Controller
             'description'     => 'nullable|string',
             'highlights'      => 'nullable|array',
             'is_active'       => 'boolean',
+            'is_featured'     => 'boolean',
         ]);
 
         $destination->update($validated);

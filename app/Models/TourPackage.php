@@ -9,15 +9,16 @@ class TourPackage extends Model
     protected $fillable = [
         'country_id', 'slug', 'title', 'subtitle', 'image', 'badge',
         'duration', 'duration_days', 'duration_nights',
-        'price', 'currency', 'includes', 'itinerary', 'highlights', 'terms', 'is_active',
+        'price', 'currency', 'includes', 'itinerary', 'highlights', 'terms', 'is_active', 'is_featured',
     ];
 
     protected $casts = [
-        'includes'   => 'array',
-        'itinerary'  => 'array',
-        'highlights' => 'array',
-        'is_active'  => 'boolean',
-        'price'      => 'float',
+        'includes'    => 'array',
+        'itinerary'   => 'array',
+        'highlights'  => 'array',
+        'is_active'   => 'boolean',
+        'is_featured' => 'boolean',
+        'price'       => 'float',
     ];
 
     public function country()

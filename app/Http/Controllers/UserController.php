@@ -16,14 +16,29 @@ class UserController extends Controller
     {
         $user = $request->user();
 
+        $upcomingTrips = \App\Models\Booking::where('user_id', $user->id)
+            ->whereDate('travel_date', '>=', now())
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->count();
+
+        $pastTrips = \App\Models\Booking::where('user_id', $user->id)
+            ->where(function ($q) {
+                $q->whereDate('travel_date', '<', now())
+                  ->orWhere('status', 'completed');
+            })
+            ->count();
+
         return response()->json([
-            'id'         => $user->id,
-            'name'       => $user->name,
-            'email'      => $user->email,
-            'phone'      => $user->phone,
-            'country'    => $user->country,
-            'role'       => $user->email === 'admin@plantriponline.com' ? 'Admin' : 'User',
-            'created_at' => $user->created_at,
+            'id'                   => $user->id,
+            'name'                 => $user->name,
+            'email'                => $user->email,
+            'phone'                => $user->phone,
+            'country'              => $user->country,
+            'role'                 => $user->email === 'admin@plantriponline.com' ? 'Admin' : 'User',
+            'upcoming_trips_count' => $upcomingTrips,
+            'past_trips_count'     => $pastTrips,
+            'total_bookings_count' => \App\Models\Booking::where('user_id', $user->id)->count(),
+            'created_at'           => $user->created_at,
         ]);
     }
 

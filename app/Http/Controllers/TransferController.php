@@ -9,6 +9,37 @@ use Illuminate\Http\Request;
 class TransferController extends Controller
 {
     /**
+     * GET /api/transfers
+     * List all transfers across countries with optional filters.
+     */
+    public function index(Request $request)
+    {
+        $query = Transfer::where('is_active', true)
+            ->with(['country:id,name,slug,currency']);
+
+        if ($request->filled('country')) {
+            $query->whereHas('country', function ($q) use ($request) {
+                $q->where('slug', $request->country)
+                  ->orWhere('name', 'like', "%{$request->country}%");
+            });
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('from_location', 'like', "%{$search}%")
+                  ->orWhere('to_location', 'like', "%{$search}%");
+            });
+        }
+
+        $limit = $request->get('limit', null);
+        $transfers = $limit ? $query->limit((int) $limit)->get() : $query->get();
+
+        return response()->json($transfers);
+    }
+
+    /**
      * GET /api/countries/{slug}/transfers
      * List all transfers for a country.
      */
@@ -41,7 +72,7 @@ class TransferController extends Controller
     // ─── Admin Routes ──────────────────────────────────────────────────────────
 
     /** GET /api/admin/transfers */
-    public function index()
+    public function adminIndex()
     {
         return response()->json(
             Transfer::with('country:id,name,slug')->orderBy('title')->get()

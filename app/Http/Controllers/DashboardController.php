@@ -74,6 +74,23 @@ class DashboardController extends Controller
             ->values()
             ->take(10);
 
+        // ── Recent Bookings Table for Dashboard ───────────────────────────
+        $recentBookingsTable = Booking::orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(fn($b) => [
+                'id'             => $b->id,
+                'reference'      => $b->booking_reference,
+                'customer'       => "{$b->first_name} {$b->last_name}",
+                'email'          => $b->email,
+                'destination'    => $b->destination,
+                'date'           => $b->travel_date ? $b->travel_date->format('Y-m-d') : $b->created_at->format('Y-m-d'),
+                'amount'         => '$' . number_format($b->total_amount, 2),
+                'total_amount'   => $b->total_amount,
+                'status'         => ucfirst($b->status),
+                'payment_status' => ucfirst($b->payment_status),
+            ]);
+
         // ── Pending Enquiries ──────────────────────────────────────────────
         $pendingEnquiries = Enquiry::where('status', 'pending')->count();
 
@@ -88,6 +105,7 @@ class DashboardController extends Controller
                 'data'   => $chartData,
             ],
             'recent_activity'  => $recentActivity,
+            'recent_bookings'  => $recentBookingsTable,
             'countries_count'  => Country::where('is_active', true)->count(),
         ]);
     }

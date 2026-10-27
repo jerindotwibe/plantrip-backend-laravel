@@ -13,6 +13,14 @@ class PromoCodeController extends Controller
      */
     public function validate(Request $request)
     {
+        if ($request->filled('promoCode') && !$request->filled('code')) {
+            $request->merge(['code' => $request->input('promoCode')]);
+        }
+        if (!$request->filled('total_amount')) {
+            $amt = $request->input('amount', $request->input('total', $request->input('subtotal', 0)));
+            $request->merge(['total_amount' => $amt]);
+        }
+
         $request->validate([
             'code'         => 'required|string|max:50',
             'total_amount' => 'required|numeric|min:0',

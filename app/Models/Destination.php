@@ -8,13 +8,14 @@ class Destination extends Model
 {
     protected $fillable = [
         'country_id', 'name', 'slug', 'image', 'badge',
-        'rating', 'locations_count', 'description', 'highlights', 'is_active',
+        'rating', 'locations_count', 'description', 'highlights', 'is_active', 'is_featured',
     ];
 
     protected $casts = [
-        'highlights' => 'array',
-        'is_active'  => 'boolean',
-        'rating'     => 'float',
+        'highlights'  => 'array',
+        'is_active'   => 'boolean',
+        'is_featured' => 'boolean',
+        'rating'      => 'float',
     ];
 
     public function country()

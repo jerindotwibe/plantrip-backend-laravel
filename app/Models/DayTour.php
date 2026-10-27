@@ -10,7 +10,7 @@ class DayTour extends Model
         'country_id', 'destination_id', 'slug', 'title', 'location',
         'image', 'badge', 'duration', 'description', 'features',
         'inclusions', 'exclusions', 'itinerary',
-        'rating', 'reviews_count', 'price', 'currency', 'is_active',
+        'rating', 'reviews_count', 'price', 'currency', 'is_active', 'is_featured',
     ];
 
     protected $casts = [
@@ -19,6 +19,7 @@ class DayTour extends Model
         'exclusions'    => 'array',
         'itinerary'     => 'array',
         'is_active'     => 'boolean',
+        'is_featured'   => 'boolean',
         'rating'        => 'float',
         'price'         => 'float',
     ];

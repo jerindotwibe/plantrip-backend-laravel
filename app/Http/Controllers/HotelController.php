@@ -9,6 +9,61 @@ use Illuminate\Http\Request;
 class HotelController extends Controller
 {
     /**
+     * GET /api/hotels
+     * List all hotels across countries with optional filters.
+     */
+    public function index(Request $request)
+    {
+        $query = Hotel::where('is_active', true)
+            ->with(['country:id,name,slug,currency']);
+
+        if ($request->filled('country')) {
+            $query->whereHas('country', function ($q) use ($request) {
+                $q->where('slug', $request->country)
+                  ->orWhere('name', 'like', "%{$request->country}%");
+            });
+        }
+
+        if ($request->filled('category')) {
+            $query->where('category', $request->category);
+        }
+        if ($request->filled('destination')) {
+            $query->where('destination', 'like', '%' . $request->destination . '%');
+        }
+        if ($request->filled('stars')) {
+            $query->where('stars', $request->stars);
+        }
+        if ($request->filled('min_price')) {
+            $query->where('price_per_night', '>=', $request->min_price);
+        }
+        if ($request->filled('max_price')) {
+            $query->where('price_per_night', '<=', $request->max_price);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('location', 'like', "%{$search}%")
+                  ->orWhere('destination', 'like', "%{$search}%");
+            });
+        }
+
+        $sort = $request->get('sort', 'rating');
+        match ($sort) {
+            'price_asc'  => $query->orderBy('price_per_night', 'asc'),
+            'price_desc' => $query->orderBy('price_per_night', 'desc'),
+            'stars'      => $query->orderBy('stars', 'desc'),
+            default      => $query->orderBy('rating', 'desc'),
+        };
+
+        $limit = $request->get('limit', null);
+        $hotels = $limit ? $query->limit((int) $limit)->get() : $query->get();
+
+        return response()->json($hotels);
+    }
+
+    /**
      * GET /api/countries/{slug}/hotels
      * List hotels for a country with optional filters.
      */
@@ -62,7 +117,7 @@ class HotelController extends Controller
     // ─── Admin Routes ──────────────────────────────────────────────────────────
 
     /** GET /api/admin/hotels */
-    public function index()
+    public function adminIndex()
     {
         return response()->json(
             Hotel::with('country:id,name,slug')->orderBy('title')->get()

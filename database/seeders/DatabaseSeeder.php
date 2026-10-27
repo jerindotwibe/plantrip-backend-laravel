@@ -13,8 +13,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             ThailandSeeder::class,
-            MalaysiaSeeder::class,
             PromoCodeSeeder::class,
+            ContentSeeder::class,
         ]);
     }
 }

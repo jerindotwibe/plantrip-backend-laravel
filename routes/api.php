@@ -16,6 +16,10 @@ use App\Http\Controllers\EnquiryController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\PromoCodeController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\OfficeController;
+use App\Http\Controllers\SettingController;
+use App\Http\Controllers\HomeController;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PUBLIC ROUTES  (no auth required)
@@ -27,29 +31,50 @@ Route::post('/login',           [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password',  [AuthController::class, 'resetPassword']);
 
+// ── Unified Homepage Bundle ───────────────────────────────────────────────────
+Route::get('/home',             [HomeController::class, 'index']);
+
 // ── Countries ─────────────────────────────────────────────────────────────────
 Route::get('/countries',        [CountryController::class, 'index']);
 Route::get('/countries/{slug}', [CountryController::class, 'show']);
 
 // ── Destinations ──────────────────────────────────────────────────────────────
+Route::get('/destinations',                  [DestinationController::class, 'index']);
 Route::get('/countries/{slug}/destinations', [DestinationController::class, 'byCountry']);
 Route::get('/destinations/{slug}',           [DestinationController::class, 'show']);
 
 // ── Day Tours ─────────────────────────────────────────────────────────────────
+Route::get('/day-tours',                  [DayTourController::class, 'index']);
+Route::get('/tours',                      [DayTourController::class, 'index']);
 Route::get('/countries/{slug}/day-tours', [DayTourController::class, 'byCountry']);
 Route::get('/tours/{slug}',               [DayTourController::class, 'show']);
 
 // ── Tour Packages ─────────────────────────────────────────────────────────────
+Route::get('/tour-packages',                  [TourPackageController::class, 'index']);
+Route::get('/packages',                       [TourPackageController::class, 'index']);
 Route::get('/countries/{slug}/tour-packages', [TourPackageController::class, 'byCountry']);
 Route::get('/packages/{slug}',                [TourPackageController::class, 'show']);
 
 // ── Hotels ────────────────────────────────────────────────────────────────────
+Route::get('/hotels',                  [HotelController::class, 'index']);
 Route::get('/countries/{slug}/hotels', [HotelController::class, 'byCountry']);
 Route::get('/hotels/{slug}',           [HotelController::class, 'show']);
 
 // ── Transfers ─────────────────────────────────────────────────────────────────
+Route::get('/transfers',                  [TransferController::class, 'index']);
 Route::get('/countries/{slug}/transfers', [TransferController::class, 'byCountry']);
 Route::get('/transfers/{slug}',           [TransferController::class, 'show']);
+
+// ── Customer Reviews & Testimonials ───────────────────────────────────────────
+Route::get('/reviews',      [ReviewController::class, 'index']);
+Route::get('/reviews/{id}', [ReviewController::class, 'show']);
+
+// ── Branch Offices ────────────────────────────────────────────────────────────
+Route::get('/offices',      [OfficeController::class, 'index']);
+Route::get('/offices/{id}', [OfficeController::class, 'show']);
+
+// ── Public Site Settings ──────────────────────────────────────────────────────
+Route::get('/settings',     [SettingController::class, 'index']);
 
 // ── Enquiry (public submission) ───────────────────────────────────────────────
 Route::post('/enquiries', [EnquiryController::class, 'store']);
@@ -83,6 +108,14 @@ Route::middleware('auth:sanctum')->group(function () {
 // ADMIN-ONLY ROUTES  (Sanctum token + admin email required)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// Route alias group without 'admin' prefix (supports frontend components like UsersList.jsx calling /api/users)
+Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::get('/users',        [UserController::class, 'index']);
+    Route::get('/users/{id}',   [UserController::class, 'show']);
+    Route::put('/users/{id}',   [UserController::class, 'adminUpdate']);
+    Route::delete('/users/{id}',[UserController::class, 'destroy']);
+});
+
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
@@ -101,30 +134,31 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::delete('/countries/{id}',  [CountryController::class, 'destroy']);
 
     // ── Destinations ──────────────────────────────────────────────────────────
+    Route::get('/destinations',          [DestinationController::class, 'index']);
     Route::post('/destinations',         [DestinationController::class, 'store']);
     Route::put('/destinations/{id}',     [DestinationController::class, 'update']);
     Route::delete('/destinations/{id}',  [DestinationController::class, 'destroy']);
 
     // ── Day Tours ─────────────────────────────────────────────────────────────
-    Route::get('/day-tours',          [DayTourController::class, 'index']);
+    Route::get('/day-tours',          [DayTourController::class, 'adminIndex']);
     Route::post('/day-tours',         [DayTourController::class, 'store']);
     Route::put('/day-tours/{id}',     [DayTourController::class, 'update']);
     Route::delete('/day-tours/{id}',  [DayTourController::class, 'destroy']);
 
     // ── Tour Packages ─────────────────────────────────────────────────────────
-    Route::get('/tour-packages',          [TourPackageController::class, 'index']);
+    Route::get('/tour-packages',          [TourPackageController::class, 'adminIndex']);
     Route::post('/tour-packages',         [TourPackageController::class, 'store']);
     Route::put('/tour-packages/{id}',     [TourPackageController::class, 'update']);
     Route::delete('/tour-packages/{id}',  [TourPackageController::class, 'destroy']);
 
     // ── Hotels ────────────────────────────────────────────────────────────────
-    Route::get('/hotels',          [HotelController::class, 'index']);
+    Route::get('/hotels',          [HotelController::class, 'adminIndex']);
     Route::post('/hotels',         [HotelController::class, 'store']);
     Route::put('/hotels/{id}',     [HotelController::class, 'update']);
     Route::delete('/hotels/{id}',  [HotelController::class, 'destroy']);
 
     // ── Transfers ─────────────────────────────────────────────────────────────
-    Route::get('/transfers',          [TransferController::class, 'index']);
+    Route::get('/transfers',          [TransferController::class, 'adminIndex']);
     Route::post('/transfers',         [TransferController::class, 'store']);
     Route::put('/transfers/{id}',     [TransferController::class, 'update']);
     Route::delete('/transfers/{id}',  [TransferController::class, 'destroy']);
@@ -146,4 +180,20 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::post('/promo-codes',         [PromoCodeController::class, 'store']);
     Route::put('/promo-codes/{id}',     [PromoCodeController::class, 'update']);
     Route::delete('/promo-codes/{id}',  [PromoCodeController::class, 'destroy']);
+
+    // ── Reviews & Testimonials ────────────────────────────────────────────────
+    Route::get('/reviews',              [ReviewController::class, 'adminIndex']);
+    Route::post('/reviews',             [ReviewController::class, 'store']);
+    Route::put('/reviews/{id}',         [ReviewController::class, 'update']);
+    Route::delete('/reviews/{id}',      [ReviewController::class, 'destroy']);
+
+    // ── Branch Offices ────────────────────────────────────────────────────────
+    Route::get('/offices',              [OfficeController::class, 'adminIndex']);
+    Route::post('/offices',             [OfficeController::class, 'store']);
+    Route::put('/offices/{id}',         [OfficeController::class, 'update']);
+    Route::delete('/offices/{id}',      [OfficeController::class, 'destroy']);
+
+    // ── Site Settings ─────────────────────────────────────────────────────────
+    Route::get('/settings',             [SettingController::class, 'adminIndex']);
+    Route::put('/settings',             [SettingController::class, 'update']);
 });

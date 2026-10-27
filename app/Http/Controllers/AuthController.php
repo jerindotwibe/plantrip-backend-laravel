@@ -37,6 +37,7 @@ class AuthController extends Controller
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
+            'message'    => 'Registration successful.',
             'token'      => $token,
             'token_type' => 'Bearer',
             'user'       => [
@@ -45,6 +46,7 @@ class AuthController extends Controller
                 'email'      => $user->email,
                 'phone'      => $user->phone,
                 'country'    => $user->country,
+                'role'       => $user->email === 'admin@plantriponline.com' ? 'Admin' : 'User',
                 'created_at' => $user->created_at,
             ],
         ], 201);
@@ -75,6 +77,7 @@ class AuthController extends Controller
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
+            'message'    => 'Login successful.',
             'token'      => $token,
             'token_type' => 'Bearer',
             'user'       => [
@@ -83,6 +86,7 @@ class AuthController extends Controller
                 'email'      => $user->email,
                 'phone'      => $user->phone,
                 'country'    => $user->country,
+                'role'       => $user->email === 'admin@plantriponline.com' ? 'Admin' : 'User',
                 'created_at' => $user->created_at,
             ],
         ]);
@@ -94,7 +98,13 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        if ($request->user()) {
+            if ($request->user()->currentAccessToken()) {
+                $request->user()->currentAccessToken()->delete();
+            } else {
+                $request->user()->tokens()->delete();
+            }
+        }
 
         return response()->json(['message' => 'Logged out successfully.']);
     }

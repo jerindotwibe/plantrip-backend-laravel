@@ -9,6 +9,70 @@ use Illuminate\Http\Request;
 class DayTourController extends Controller
 {
     /**
+     * GET /api/day-tours or GET /api/tours
+     * List all day tours across countries with optional filters.
+     */
+    public function index(Request $request)
+    {
+        $query = DayTour::where('is_active', true)
+            ->with(['country:id,name,slug,currency', 'destination:id,name,slug']);
+
+        if ($request->filled('country')) {
+            $query->whereHas('country', function ($q) use ($request) {
+                $q->where('slug', $request->country)
+                  ->orWhere('name', 'like', "%{$request->country}%");
+            });
+        }
+
+        if ($request->filled('destination')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('location', 'like', "%{$request->destination}%")
+                  ->orWhereHas('destination', function ($dq) use ($request) {
+                      $dq->where('slug', $request->destination)
+                        ->orWhere('name', 'like', "%{$request->destination}%");
+                  });
+            });
+        }
+
+        if ($request->boolean('featured') || $request->input('featured') === '1') {
+            $query->where('is_featured', true);
+        }
+
+        if ($request->filled('location')) {
+            $query->where('location', 'like', "%{$request->location}%");
+        }
+
+        if ($request->filled('min_price')) {
+            $query->where('price', '>=', $request->min_price);
+        }
+        if ($request->filled('max_price')) {
+            $query->where('price', '<=', $request->max_price);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhere('location', 'like', "%{$search}%");
+            });
+        }
+
+        $sort = $request->get('sort', 'popular');
+        match ($sort) {
+            'price_asc'  => $query->orderBy('price', 'asc'),
+            'price_desc' => $query->orderBy('price', 'desc'),
+            'rating'     => $query->orderBy('rating', 'desc'),
+            default      => $query->orderBy('reviews_count', 'desc'),
+        };
+
+        $limit = $request->get('limit', null);
+        $tours = $limit ? $query->limit((int) $limit)->get() : $query->get();
+
+        return response()->json($tours);
+    }
+
+    /**
      * GET /api/countries/{slug}/day-tours
      * List day tours for a country with optional filters.
      */
@@ -56,7 +120,7 @@ class DayTourController extends Controller
     // ─── Admin Routes ──────────────────────────────────────────────────────────
 
     /** GET /api/admin/day-tours */
-    public function index()
+    public function adminIndex()
     {
         return response()->json(
             DayTour::with('country:id,name,slug')->orderBy('title')->get()
@@ -85,6 +149,7 @@ class DayTourController extends Controller
             'price'          => 'required|numeric|min:0',
             'currency'       => 'nullable|string|max:10',
             'is_active'      => 'boolean',
+            'is_featured'    => 'boolean',
         ]);
 
         $tour = DayTour::create($validated);
@@ -112,6 +177,7 @@ class DayTourController extends Controller
             'price'         => 'sometimes|numeric|min:0',
             'currency'      => 'nullable|string|max:10',
             'is_active'     => 'boolean',
+            'is_featured'   => 'boolean',
         ]);
 
         $tour->update($validated);

@@ -15,6 +15,64 @@ class BookingController extends Controller
      */
     public function store(Request $request)
     {
+        // Normalize camelCase / alias inputs from frontend if present
+        $mergeData = [];
+        if ($request->filled('firstName') && !$request->filled('first_name')) {
+            $mergeData['first_name'] = $request->input('firstName');
+        }
+        if ($request->filled('lastName') && !$request->filled('last_name')) {
+            $mergeData['last_name'] = $request->input('lastName');
+        }
+        if ($request->filled('date') && !$request->filled('travel_date')) {
+            $mergeData['travel_date'] = $request->input('date');
+        }
+        if ($request->filled('travelDate') && !$request->filled('travel_date')) {
+            $mergeData['travel_date'] = $request->input('travelDate');
+        }
+        if ($request->filled('telephone') && !$request->filled('phone')) {
+            $mergeData['phone'] = $request->input('telephone');
+        }
+        if ($request->filled('countryCode') && !$request->filled('country_code')) {
+            $mergeData['country_code'] = $request->input('countryCode');
+        }
+        if ($request->filled('customPickup') && (!$request->filled('pick_up') || $request->input('pick_up') === 'custom')) {
+            $mergeData['pick_up'] = $request->input('customPickup');
+        } elseif ($request->filled('pickUp') && !$request->filled('pick_up')) {
+            $mergeData['pick_up'] = $request->input('pickUp');
+        }
+        if ($request->filled('customDrop') && (!$request->filled('drop_point') || $request->input('drop_point') === 'custom')) {
+            $mergeData['drop_point'] = $request->input('customDrop');
+        } elseif ($request->filled('dropPoint') && !$request->filled('drop_point')) {
+            $mergeData['drop_point'] = $request->input('dropPoint');
+        }
+        if ($request->filled('promoCode') && !$request->filled('promo_code')) {
+            $mergeData['promo_code'] = $request->input('promoCode');
+        }
+        if ($request->filled('paymentMethod') && !$request->filled('payment_method')) {
+            $mergeData['payment_method'] = $request->input('paymentMethod');
+        }
+        if ($request->filled('specialRequests') && !$request->filled('special_requests')) {
+            $mergeData['special_requests'] = $request->input('specialRequests');
+        }
+        if ($request->has('kids') && is_array($request->input('kids')) && !$request->filled('children')) {
+            $mergeData['children'] = count($request->input('kids'));
+        } elseif ($request->has('children') && is_array($request->input('children'))) {
+            $mergeData['children'] = count($request->input('children'));
+        }
+        if ($request->filled('total') && !$request->filled('total_amount')) {
+            $mergeData['total_amount'] = $request->input('total');
+        }
+        if ($request->filled('totalAmount') && !$request->filled('total_amount')) {
+            $mergeData['total_amount'] = $request->input('totalAmount');
+        }
+        if (!$request->filled('subtotal') && ($request->filled('total_amount') || isset($mergeData['total_amount']))) {
+            $mergeData['subtotal'] = $request->filled('total_amount') ? $request->input('total_amount') : $mergeData['total_amount'];
+        }
+
+        if (!empty($mergeData)) {
+            $request->merge($mergeData);
+        }
+
         $validated = $request->validate([
             // Trip info
             'destination'     => 'required|string|max:255',

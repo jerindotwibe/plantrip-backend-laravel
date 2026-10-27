@@ -13,6 +13,10 @@ class EnquiryController extends Controller
      */
     public function store(Request $request)
     {
+        if ($request->filled('name') && !$request->filled('full_name')) {
+            $request->merge(['full_name' => $request->input('name')]);
+        }
+
         $validated = $request->validate([
             'full_name'    => 'required|string|max:255',
             'email'        => 'required|email|max:255',
