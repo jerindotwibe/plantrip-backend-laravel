@@ -15,13 +15,17 @@ class TransferController extends Controller
     public function index(Request $request)
     {
         $query = Transfer::where('is_active', true)
-            ->with(['country:id,name,slug,currency']);
+            ->with(['country:id,name,slug,currency', 'destination:id,name,slug']);
 
         if ($request->filled('country')) {
             $query->whereHas('country', function ($q) use ($request) {
                 $q->where('slug', $request->country)
                   ->orWhere('name', 'like', "%{$request->country}%");
             });
+        }
+
+        if ($request->filled('destination_id')) {
+            $query->where('destination_id', $request->destination_id);
         }
 
         if ($request->filled('search')) {
@@ -63,7 +67,7 @@ class TransferController extends Controller
     {
         $transfer = Transfer::where('slug', $slug)
             ->where('is_active', true)
-            ->with('country:id,name,slug')
+            ->with(['country:id,name,slug', 'destination:id,name,slug'])
             ->firstOrFail();
 
         return response()->json($transfer);
@@ -75,7 +79,7 @@ class TransferController extends Controller
     public function adminIndex()
     {
         return response()->json(
-            Transfer::with('country:id,name,slug')->orderBy('title')->get()
+            Transfer::with(['country:id,name,slug', 'destination:id,name,slug'])->orderBy('title')->get()
         );
     }
 
@@ -83,18 +87,19 @@ class TransferController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'country_id'    => 'required|exists:countries,id',
-            'slug'          => 'required|string|max:150|unique:transfers',
-            'title'         => 'required|string|max:255',
-            'from_location' => 'required|string|max:255',
-            'to_location'   => 'required|string|max:255',
-            'duration'      => 'nullable|string|max:50',
-            'price'         => 'required|numeric|min:0',
-            'currency'      => 'nullable|string|max:10',
-            'image'         => 'nullable|string',
-            'vehicles'      => 'nullable|array',
-            'description'   => 'nullable|string',
-            'is_active'     => 'boolean',
+            'country_id'     => 'required|exists:countries,id',
+            'destination_id' => 'nullable|exists:destinations,id',
+            'slug'           => 'required|string|max:150|unique:transfers',
+            'title'          => 'required|string|max:255',
+            'from_location'  => 'required|string|max:255',
+            'to_location'    => 'required|string|max:255',
+            'duration'       => 'nullable|string|max:50',
+            'price'          => 'required|numeric|min:0',
+            'currency'       => 'nullable|string|max:10',
+            'image'          => 'nullable|string',
+            'vehicles'       => 'nullable|array',
+            'description'    => 'nullable|string',
+            'is_active'      => 'boolean',
         ]);
 
         $transfer = Transfer::create($validated);
@@ -107,16 +112,19 @@ class TransferController extends Controller
         $transfer = Transfer::findOrFail($id);
 
         $validated = $request->validate([
-            'title'         => 'sometimes|string|max:255',
-            'from_location' => 'sometimes|string|max:255',
-            'to_location'   => 'sometimes|string|max:255',
-            'duration'      => 'nullable|string|max:50',
-            'price'         => 'sometimes|numeric|min:0',
-            'currency'      => 'nullable|string|max:10',
-            'image'         => 'nullable|string',
-            'vehicles'      => 'nullable|array',
-            'description'   => 'nullable|string',
-            'is_active'     => 'boolean',
+            'country_id'     => 'sometimes|exists:countries,id',
+            'destination_id' => 'nullable|exists:destinations,id',
+            'slug'           => 'sometimes|string|max:150|unique:transfers,slug,' . $transfer->id,
+            'title'          => 'sometimes|string|max:255',
+            'from_location'  => 'sometimes|string|max:255',
+            'to_location'    => 'sometimes|string|max:255',
+            'duration'       => 'nullable|string|max:50',
+            'price'          => 'sometimes|numeric|min:0',
+            'currency'       => 'nullable|string|max:10',
+            'image'          => 'nullable|string',
+            'vehicles'       => 'nullable|array',
+            'description'    => 'nullable|string',
+            'is_active'      => 'boolean',
         ]);
 
         $transfer->update($validated);

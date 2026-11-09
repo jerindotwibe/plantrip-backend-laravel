@@ -57,16 +57,24 @@ class CountryController extends Controller
      */
     public function store(Request $request)
     {
+        if ($request->filled('currency_code') && !$request->filled('currency')) {
+            $request->merge(['currency' => $request->currency_code]);
+        } elseif ($request->filled('currency') && !$request->filled('currency_code')) {
+            $request->merge(['currency_code' => $request->currency]);
+        }
+
         $validated = $request->validate([
-            'name'          => 'required|string|max:100',
-            'slug'          => 'required|string|max:100|unique:countries',
-            'flag'          => 'nullable|string|max:10',
-            'currency'      => 'nullable|string|max:10',
-            'hero_image'    => 'nullable|string|url',
-            'hero_title'    => 'nullable|string|max:255',
-            'tagline'       => 'nullable|string|max:255',
-            'description'   => 'nullable|string',
-            'is_active'     => 'boolean',
+            'name'            => 'required|string|max:100',
+            'slug'            => 'required|string|max:100|unique:countries',
+            'flag'            => 'nullable|string|max:10',
+            'currency'        => 'nullable|string|max:10',
+            'currency_code'   => 'nullable|string|max:10',
+            'currency_symbol' => 'nullable|string|max:10',
+            'hero_image'      => 'nullable|string|max:500',
+            'hero_title'      => 'nullable|string|max:255',
+            'tagline'         => 'nullable|string|max:255',
+            'description'     => 'nullable|string',
+            'is_active'       => 'boolean',
         ]);
 
         $country = Country::create($validated);
@@ -81,15 +89,24 @@ class CountryController extends Controller
     {
         $country = Country::findOrFail($id);
 
+        if ($request->filled('currency_code') && !$request->filled('currency')) {
+            $request->merge(['currency' => $request->currency_code]);
+        } elseif ($request->filled('currency') && !$request->filled('currency_code')) {
+            $request->merge(['currency_code' => $request->currency]);
+        }
+
         $validated = $request->validate([
-            'name'        => 'sometimes|string|max:100',
-            'flag'        => 'nullable|string|max:10',
-            'currency'    => 'nullable|string|max:10',
-            'hero_image'  => 'nullable|string|url',
-            'hero_title'  => 'nullable|string|max:255',
-            'tagline'     => 'nullable|string|max:255',
-            'description' => 'nullable|string',
-            'is_active'   => 'boolean',
+            'name'            => 'sometimes|string|max:100',
+            'slug'            => 'sometimes|string|max:100|unique:countries,slug,' . $country->id,
+            'flag'            => 'nullable|string|max:10',
+            'currency'        => 'nullable|string|max:10',
+            'currency_code'   => 'nullable|string|max:10',
+            'currency_symbol' => 'nullable|string|max:10',
+            'hero_image'      => 'nullable|string|max:500',
+            'hero_title'      => 'nullable|string|max:255',
+            'tagline'         => 'nullable|string|max:255',
+            'description'     => 'nullable|string',
+            'is_active'       => 'boolean',
         ]);
 
         $country->update($validated);

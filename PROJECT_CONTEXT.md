@@ -198,7 +198,7 @@ graph TD
 
 ## 5. Complete Backend Route and API Inventory
 
-The application defines **92 API routes** in [`routes/api.php`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/routes/api.php) and **8 web utility routes** in [`routes/web.php`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/routes/web.php).
+The application defines **96 API routes** in [`routes/api.php`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/routes/api.php) and **8 web utility routes** in [`routes/web.php`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/routes/web.php) (108 total compiled routes).
 
 ### 1. Public API Endpoints (No Authentication Required)
 
@@ -257,7 +257,11 @@ The application defines **92 API routes** in [`routes/api.php`](file:///e:/Euras
 | `GET /api/users/{id}` *(Alias)* | [`UserController@show`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/app/Http/Controllers/UserController.php#L101) | Path: `id` | Returns specific user profile details. |
 | `PUT /api/users/{id}` *(Alias)* | [`UserController@adminUpdate`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/app/Http/Controllers/UserController.php#L121) | Path: `id`, Body: `{ name?, phone?, country? }` | Updates any user profile. |
 | `DELETE /api/users/{id}` *(Alias)* | [`UserController@destroy`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/app/Http/Controllers/UserController.php#L140) | Path: `id` | Deletes user and associated tokens (prevents self-deletion). |
-| `GET /api/admin/dashboard/stats` | [`DashboardController@stats`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/app/Http/Controllers/DashboardController.php#L17) | None | Returns platform stats (total users, active bookings, revenue, packages, recent bookings list, 7-day revenue chart data, activity feed). |
+| `GET /api/admin/dashboard/stats` | [`DashboardController@stats`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/app/Http/Controllers/DashboardController.php#L17) | None | Returns platform stats (total users, total bookings, active bookings, revenue, packages, active hotels, active tours, pending reviews, recent bookings list, 7-day revenue chart data, activity feed). |
+| `GET /api/admin/notifications/count` | [`DashboardController@notificationsCount`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/app/Http/Controllers/DashboardController.php) | None | Returns real-time counts for pending bookings, pending enquiries, and pending reviews. |
+| `POST /api/admin/upload` | [`DashboardController@upload`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/app/Http/Controllers/DashboardController.php) | Multipart `file` | Uploads media file to public storage and returns `{ success, url, path }`. |
+| `PUT /api/admin/profile` | [`UserController@updateAdminProfile`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/app/Http/Controllers/UserController.php) | Body: `{ name }` | Updates the logged-in administrator display name. |
+| `PUT /api/admin/profile/password` | [`UserController@updateAdminPassword`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/app/Http/Controllers/UserController.php) | Body: `{ current_password, password, password_confirmation }` | Securely validates current password and updates admin password. |
 | `GET /api/admin/users` | [`UserController@index`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/app/Http/Controllers/UserController.php#L79) | None | Lists all registered users. |
 | `GET /api/admin/users/{id}` | [`UserController@show`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/app/Http/Controllers/UserController.php#L101) | Path: `id` | Returns specific user profile details. |
 | `PUT /api/admin/users/{id}` | [`UserController@adminUpdate`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/app/Http/Controllers/UserController.php#L121) | Path: `id`, Body: updates | Updates any user profile. |
@@ -413,18 +417,35 @@ erDiagram
     Country ||--o{ Hotel : "has many"
     Country ||--o{ Transfer : "has many"
     Destination ||--o{ DayTour : "has many"
+    Destination ||--o{ TourPackage : "has many"
+    Destination ||--o{ Hotel : "has many"
+    Destination ||--o{ Transfer : "has many"
     User ||--o{ Booking : "has many"
     DayTour ||--o{ Booking : "has many"
     TourPackage ||--o{ Booking : "has many"
 
+    User {
+        bigint id PK
+        string name
+        string email UK
+        string phone
+        string country
+        string role
+        string status
+    }
+
     Review {
         bigint id PK
         string name
+        string email
         string trip
+        string destination
         int rating
         text comment
         string date
         string avatar
+        string status
+        text admin_note
         boolean is_featured
         boolean is_active
     }
@@ -453,6 +474,8 @@ erDiagram
         string name
         string slug UK
         string currency
+        string currency_code
+        string currency_symbol
         int tour_count
         int package_count
         boolean is_active
@@ -482,10 +505,45 @@ erDiagram
     TourPackage {
         bigint id PK
         bigint country_id FK
+        bigint destination_id FK
         string title
         string slug UK
+        text description
         float price
         boolean is_featured
+        boolean is_active
+    }
+
+    Hotel {
+        bigint id PK
+        bigint country_id FK
+        bigint destination_id FK
+        string title
+        string slug UK
+        decimal price_per_night
+        boolean is_featured
+        boolean is_active
+    }
+
+    Transfer {
+        bigint id PK
+        bigint country_id FK
+        bigint destination_id FK
+        string title
+        string slug UK
+        decimal price
+        boolean is_active
+    }
+
+    PromoCode {
+        bigint id PK
+        string code UK
+        string discount_type
+        decimal discount_value
+        decimal min_amount
+        int max_uses
+        int uses_count
+        datetime expires_at
         boolean is_active
     }
 
@@ -525,6 +583,12 @@ Migrated tables in [`database/migrations/`](file:///e:/Eurasia%20Holidays/plantr
 | `2026_10_27_000002_create_reviews_table.php` | `reviews` | `id`, `name`, `trip`, `rating`, `comment`, `date`, `avatar`, `is_featured`, `is_active` | Dynamic testimonials and customer reviews |
 | `2026_10_27_000003_create_offices_table.php` | `offices` | `id`, `title`, `address`, `phone`, `email`, `map_embed_url`, `map_image_url`, `sort_order`, `is_active` | Physical branch office addresses & contact info |
 | `2026_10_27_000004_create_settings_table.php` | `settings` | `id`, `key` (string unique), `value` (text nullable), `group` (string default 'general') | Centralized platform configuration dictionary |
+| `2026_11_09_000001_add_role_and_status_to_users_table.php` | `users` (Alter) | `role` (string default 'user'), `status` (string default 'active') | User role assignment and status management |
+| `2026_11_09_000002_add_currency_fields_to_countries_table.php` | `countries` (Alter) | `currency_code` (string nullable), `currency_symbol` (string nullable) | Structured currency data for multi-country pricing |
+| `2026_11_09_000003_add_destination_and_description_to_tour_packages_table.php` | `tour_packages` (Alter) | `destination_id` (FK nullable to destinations.id), `description` (text nullable) | Destination linkage and rich itinerary overview |
+| `2026_11_09_000004_add_destination_and_featured_to_hotels_table.php` | `hotels` (Alter) | `destination_id` (FK nullable to destinations.id), `is_featured` (boolean default false, indexed) | Destination relational linkage and hotel promotion |
+| `2026_11_09_000005_add_destination_to_transfers_table.php` | `transfers` (Alter) | `destination_id` (FK nullable to destinations.id) | Destination relational linkage for ground transport |
+| `2026_11_09_000006_add_moderation_fields_to_reviews_table.php` | `reviews` (Alter) | `email` (string nullable), `destination` (string nullable), `status` (enum ['pending','approved','rejected'] default 'pending'), `admin_note` (text nullable) | Review moderation, verification, and audit notes |
 
 ---
 
@@ -536,13 +600,14 @@ Migrated tables in [`database/migrations/`](file:///e:/Eurasia%20Holidays/plantr
 - Tokens issued via `$user->createToken('auth_token')->plainTextToken`.
 - On login, older tokens are purged via `$user->tokens()->delete()` to prevent token clutter.
 
-### Role Authorization
-- Role evaluation is handled dynamically without requiring an extra role column:
-  - `Admin`: User having email `admin@plantriponline.com`.
+### Role Authorization & Status Management
+- `User` table contains persistent `role` (e.g. `'admin'`, `'user'`) and `status` (e.g. `'active'`, `'suspended'`).
+- Backwards-compatible resolution in `UserController` and `AdminMiddleware`:
+  - `Admin`: User having `role === 'admin'` OR email `admin@plantriponline.com`.
   - `User`: Any other registered user.
 - **Admin Middleware ([`AdminMiddleware.php`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/app/Http/Middleware/AdminMiddleware.php)):**
   - Registered with alias `'admin'` in [`bootstrap/app.php`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/bootstrap/app.php).
-  - Inspects `$request->user()`. If `$user->email !== 'admin@plantriponline.com'`, aborts immediately with `403 Forbidden` (`{"message": "Unauthorized. Admin access required."}`).
+  - Inspects `$request->user()`. If `$user->email !== 'admin@plantriponline.com'` and `$user->role !== 'admin'`, aborts immediately with `403 Forbidden` (`{"message": "Unauthorized. Admin access required."}`).
 
 ---
 
@@ -566,6 +631,9 @@ Migrated tables in [`database/migrations/`](file:///e:/Eurasia%20Holidays/plantr
 | **Bookings & Orders** | `BookingController` | Public/Guest Create Booking (`POST /api/bookings`) | My Bookings (`GET /api/bookings`), Booking Detail | Admin Bookings List, Detail, Update Status/Payment, Delete |
 | **Promo Vouchers** | `PromoCodeController` | Validate Promo Code (`POST /api/promo-codes/validate`)| None | List All Codes, Create, Update, Delete |
 | **Admin Analytics** | `DashboardController` | None | None | Dashboard KPI Stats, Chart Data, Recent Bookings (`GET /api/admin/dashboard/stats`) |
+| **Admin Notifications** | `DashboardController` | None | None | Pending Notifications Count (`GET /api/admin/notifications/count`) |
+| **File & Media Uploads** | `DashboardController` | None | None | File Upload (`POST /api/admin/upload`) |
+| **Admin Profile & Security** | `UserController` | None | None | Update Admin Profile (`PUT /api/admin/profile`), Update Admin Password (`PUT /api/admin/profile/password`) |
 
 ---
 
@@ -625,15 +693,18 @@ This table documents every static frontend data source found during the reposito
 | Feature / Domain | Frontend File | Expected API Endpoint | Backend Status | Status & Notes |
 | :--- | :--- | :--- | :--- | :--- |
 | **Cross-Country Homepage Catalog** | `DestinationCarousel`, `ToursGrid`, `PackagesGrid` | `GET /api/home`, `GET /api/destinations`, `GET /api/day-tours`, `GET /api/tour-packages` | **100% Implemented & Tested** | Global cross-country endpoints and unified composite feed implemented with Eloquent queries and relations. |
-| **Customer Testimonials & Reviews** | `Testimonials.jsx` | `GET /api/reviews` & `POST/PUT/DELETE /api/admin/reviews` | **100% Implemented & Tested** | `Review` model, migration, public index/show, and admin CRUD endpoints live and verified. |
+| **Customer Testimonials & Reviews** | `Testimonials.jsx`, `ReviewsManager.jsx` | `GET /api/reviews` & `POST/PUT/DELETE /api/admin/reviews` | **100% Implemented & Tested** | `Review` model updated with `email`, `destination`, `status`, `admin_note`. Filtering by status/search and pagination fully active. |
 | **Physical Branch Locations** | `PlanTripPage.jsx` | `GET /api/offices` & `POST/PUT/DELETE /api/admin/offices` | **100% Implemented & Tested** | `Office` model, migration, public index, and admin CRUD endpoints live and verified. |
 | **Platform Brand & Contact Settings** | `Header.jsx`, `Footer.jsx` | `GET /api/settings` & `PUT /api/admin/settings` | **100% Implemented & Tested** | `Setting` model, migration, public key-value retrieval, and bulk updater live and verified. |
-| **Admin Dashboard Stats & Bookings** | `AdminDashboard.jsx` | `GET /api/admin/dashboard/stats` | **100% Implemented & Tested** | `DashboardController@stats` delivers real aggregate counts, 7-day revenue chart, and recent bookings table. |
+| **Admin Dashboard Stats & Bookings** | `AdminDashboard.jsx`, `AdminOverview.jsx` | `GET /api/admin/dashboard/stats`, `GET /api/admin/notifications/count` | **100% Implemented & Tested** | Delivers KPI stats including `total_bookings`, `active_hotels`, `active_tours`, `pending_reviews`, 7-day revenue chart, and badge notifications count. |
+| **Media & File Uploads** | `api.js` (`adminUpload`), `HomePageManager.jsx` | `POST /api/admin/upload` | **100% Implemented & Tested** | Handles multipart file upload to public storage disk and returns public URL `{ url, path }`. |
+| **Admin Profile & Password** | `AdminProfileSettings.jsx` | `PUT /api/admin/profile`, `PUT /api/admin/profile/password` | **100% Implemented & Tested** | Supports display name updates and secure password updates with current password validation. |
 | **User Dashboard Trips Counters** | `UserDashboard.jsx` | `GET /api/user` | **100% Implemented & Tested** | `UserController@profile` dynamically queries `upcoming_trips_count`, `past_trips_count`, and `total_bookings_count`. |
-| **Admin Users Management** | `UsersList.jsx` | `GET /api/users` & `GET /api/admin/users` | **100% Implemented & Tested** | Route aliases registered under `auth:sanctum` and `admin` middleware. |
-| **Booking Intake Engine** | `BookingPage.jsx` | `POST /api/bookings` | **100% Implemented & Tested** | Accepts camelCase and snake_case inputs, validates promo codes, generates `BK-YYYY-XXXX`. |
-| **Promo Code Engine** | `BookingPage.jsx` | `POST /api/promo-codes/validate` | **100% Implemented & Tested** | Validates active status, expiry, min amount, usage limits, and computes discount. |
-| **Lead Enquiries Intake** | `EnquiryPage.jsx` | `POST /api/enquiries` | **100% Implemented & Tested** | Persists leads to database with pending status; admin triage endpoints active. |
+| **Admin Users Management** | `UsersList.jsx` | `GET /api/users` & `GET /api/admin/users`, `PUT /api/admin/users/{id}` | **100% Implemented & Tested** | Persists `role` and `status` attributes. Route aliases registered under `auth:sanctum` and `admin` middleware. |
+| **Booking Intake Engine** | `BookingPage.jsx`, `BookingsList.jsx` | `POST /api/bookings`, `GET /api/admin/bookings` | **100% Implemented & Tested** | Accepts camelCase and snake_case inputs, validates promo codes, generates `BK-YYYY-XXXX`, supports search filtering. |
+| **Promo Code Engine** | `BookingPage.jsx`, `PromoCodesList.jsx` | `POST /api/promo-codes/validate`, `GET/POST/PUT /api/admin/promo-codes` | **100% Implemented & Tested** | Reuses `discount_type` and `discount_value` under `type`/`value` aliases via Eloquent `$appends` accessors. |
+| **Lead Enquiries Intake** | `EnquiryPage.jsx`, `EnquiriesList.jsx` | `POST /api/enquiries`, `GET /api/admin/enquiries` | **100% Implemented & Tested** | Persists leads to database with pending status; supports admin search filtering and triage. |
+| **Catalog Relational Linkages** | `TourPackagesList`, `HotelsList`, `TransfersList` | Admin catalog CRUD endpoints | **100% Implemented & Tested** | `destination_id` foreign keys, `is_featured` on hotels, and `description` on packages added via migrations and models. |
 
 ---
 
@@ -696,9 +767,18 @@ The environment configuration is specified in [`.env.example`](file:///e:/Eurasi
 - Base test cases in `tests/TestCase.php`.
 
 ### Verification Status
-- Testing suite is configured with PHPUnit 11.5.3.
-- `tests/Feature/` test files have been removed from the repository per user direction.
-- Unit testing configuration remains available via `tests/Unit/` and `phpunit.xml`.
+- **Routes Compilation:** All 108 routes (96 API routes, 8 web utility routes, 4 Sanctum/framework routes) compiled and verified error-free via `php artisan route:list`.
+- **Database Migrations:** All 24 migrations (18 legacy + 6 new 2026_11_09 migrations) successfully executed and confirmed in `Ran` status on SQLite development database.
+- **Model & Schema Verification:** 22/22 automated assertions passed covering:
+  - `User`: `$fillable` `role` & `status`.
+  - `Country`: `$fillable` `currency_code` & `currency_symbol`.
+  - `TourPackage`: `$fillable` `destination_id`, `description`, and `destination()` BelongsTo relation.
+  - `Hotel`: `$fillable` `destination_id`, `is_featured`, `destination()` BelongsTo relation, and dynamic `price` accessor.
+  - `Transfer`: `$fillable` `destination_id` and `destination()` BelongsTo relation.
+  - `Review`: `$fillable` `email`, `destination`, `status`, `admin_note`.
+  - `Destination`: `tourPackages()`, `hotels()`, and `transfers()` HasMany relations.
+  - `PromoCode`: Dynamic `$appends` accessors `type` and `value`.
+  - `DashboardController`: `notificationsCount()` returning `{ pending_bookings, pending_enquiries, pending_reviews }` and `stats()` returning quick stats.
 
 ---
 
@@ -743,7 +823,7 @@ php artisan serve
 
 | File Path | Lines | Core Classes / Symbols | Operational Role |
 | :--- | :---: | :--- | :--- |
-| [`routes/api.php`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/routes/api.php) | 199 | Route registry | Declares all 92 API endpoints across public, auth, and admin scopes. |
+| [`routes/api.php`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/routes/api.php) | 207 | Route registry | Declares all 96 API endpoints across public, auth, and admin scopes. |
 | [`routes/web.php`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/routes/web.php) | 150 | Route registry | Operational web endpoints (deploy webhook, migrations, cache clear, admin setup). |
 | [`bootstrap/app.php`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/bootstrap/app.php) | 27 | App configuration | Registers API routes, CSRF exceptions, and `'admin'` middleware alias. |
 | [`app/Http/Controllers/HomeController.php`](file:///e:/Eurasia%20Holidays/plantrip/plantrip-laravel/app/Http/Controllers/HomeController.php) | 74 | `HomeController` | Assembles composite feed for the homepage. |

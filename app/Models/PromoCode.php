@@ -18,6 +18,18 @@ class PromoCode extends Model
         'expires_at'     => 'datetime',
     ];
 
+    protected $appends = ['type', 'value'];
+
+    public function getTypeAttribute()
+    {
+        return $this->discount_type;
+    }
+
+    public function getValueAttribute()
+    {
+        return $this->discount_value;
+    }
+
     /**
      * Check if this promo code is currently valid.
      */

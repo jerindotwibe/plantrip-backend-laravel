@@ -15,13 +15,21 @@ class HotelController extends Controller
     public function index(Request $request)
     {
         $query = Hotel::where('is_active', true)
-            ->with(['country:id,name,slug,currency']);
+            ->with(['country:id,name,slug,currency', 'destination:id,name,slug']);
 
         if ($request->filled('country')) {
             $query->whereHas('country', function ($q) use ($request) {
                 $q->where('slug', $request->country)
                   ->orWhere('name', 'like', "%{$request->country}%");
             });
+        }
+
+        if ($request->filled('destination_id')) {
+            $query->where('destination_id', $request->destination_id);
+        }
+
+        if ($request->boolean('featured') || $request->input('featured') === '1') {
+            $query->where('is_featured', true);
         }
 
         if ($request->filled('category')) {
@@ -108,7 +116,7 @@ class HotelController extends Controller
     {
         $hotel = Hotel::where('slug', $slug)
             ->where('is_active', true)
-            ->with('country:id,name,slug')
+            ->with(['country:id,name,slug', 'destination:id,name,slug'])
             ->firstOrFail();
 
         return response()->json($hotel);
@@ -120,15 +128,21 @@ class HotelController extends Controller
     public function adminIndex()
     {
         return response()->json(
-            Hotel::with('country:id,name,slug')->orderBy('title')->get()
+            Hotel::with(['country:id,name,slug', 'destination:id,name,slug'])->orderBy('title')->get()
         );
     }
 
     /** POST /api/admin/hotels */
     public function store(Request $request)
     {
+        // Support frontend sending 'price' instead of 'price_per_night'
+        if ($request->has('price') && !$request->has('price_per_night')) {
+            $request->merge(['price_per_night' => $request->price]);
+        }
+
         $validated = $request->validate([
             'country_id'      => 'required|exists:countries,id',
+            'destination_id'  => 'nullable|exists:destinations,id',
             'slug'            => 'required|string|max:150|unique:hotels',
             'title'           => 'required|string|max:255',
             'location'        => 'nullable|string|max:255',
@@ -145,6 +159,7 @@ class HotelController extends Controller
             'description'     => 'nullable|string',
             'policies'        => 'nullable|string',
             'is_active'       => 'boolean',
+            'is_featured'     => 'boolean',
         ]);
 
         $hotel = Hotel::create($validated);
@@ -156,7 +171,15 @@ class HotelController extends Controller
     {
         $hotel = Hotel::findOrFail($id);
 
+        // Support frontend sending 'price' instead of 'price_per_night'
+        if ($request->has('price') && !$request->has('price_per_night')) {
+            $request->merge(['price_per_night' => $request->price]);
+        }
+
         $validated = $request->validate([
+            'country_id'      => 'sometimes|exists:countries,id',
+            'destination_id'  => 'nullable|exists:destinations,id',
+            'slug'            => 'sometimes|string|max:150|unique:hotels,slug,' . $hotel->id,
             'title'           => 'sometimes|string|max:255',
             'location'        => 'nullable|string|max:255',
             'image'           => 'nullable|string',
@@ -172,6 +195,7 @@ class HotelController extends Controller
             'description'     => 'nullable|string',
             'policies'        => 'nullable|string',
             'is_active'       => 'boolean',
+            'is_featured'     => 'boolean',
         ]);
 
         $hotel->update($validated);

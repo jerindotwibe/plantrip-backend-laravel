@@ -15,13 +15,17 @@ class TourPackageController extends Controller
     public function index(Request $request)
     {
         $query = TourPackage::where('is_active', true)
-            ->with(['country:id,name,slug,currency']);
+            ->with(['country:id,name,slug,currency', 'destination:id,name,slug']);
 
         if ($request->filled('country')) {
             $query->whereHas('country', function ($q) use ($request) {
                 $q->where('slug', $request->country)
                   ->orWhere('name', 'like', "%{$request->country}%");
             });
+        }
+
+        if ($request->filled('destination_id')) {
+            $query->where('destination_id', $request->destination_id);
         }
 
         if ($request->boolean('featured') || $request->input('featured') === '1') {
@@ -91,7 +95,7 @@ class TourPackageController extends Controller
     {
         $package = TourPackage::where('slug', $slug)
             ->where('is_active', true)
-            ->with('country:id,name,slug')
+            ->with(['country:id,name,slug', 'destination:id,name,slug'])
             ->firstOrFail();
 
         return response()->json($package);
@@ -103,7 +107,7 @@ class TourPackageController extends Controller
     public function adminIndex()
     {
         return response()->json(
-            TourPackage::with('country:id,name,slug')->orderBy('title')->get()
+            TourPackage::with(['country:id,name,slug', 'destination:id,name,slug'])->orderBy('title')->get()
         );
     }
 
@@ -112,9 +116,11 @@ class TourPackageController extends Controller
     {
         $validated = $request->validate([
             'country_id'      => 'required|exists:countries,id',
+            'destination_id'  => 'nullable|exists:destinations,id',
             'slug'            => 'required|string|max:150|unique:tour_packages',
             'title'           => 'required|string|max:255',
             'subtitle'        => 'nullable|string|max:255',
+            'description'     => 'nullable|string',
             'image'           => 'nullable|string',
             'badge'           => 'nullable|string|max:50',
             'duration'        => 'nullable|string|max:50',
@@ -140,8 +146,12 @@ class TourPackageController extends Controller
         $package = TourPackage::findOrFail($id);
 
         $validated = $request->validate([
+            'country_id'      => 'sometimes|exists:countries,id',
+            'destination_id'  => 'nullable|exists:destinations,id',
+            'slug'            => 'sometimes|string|max:150|unique:tour_packages,slug,' . $package->id,
             'title'           => 'sometimes|string|max:255',
             'subtitle'        => 'nullable|string|max:255',
+            'description'     => 'nullable|string',
             'image'           => 'nullable|string',
             'badge'           => 'nullable|string|max:50',
             'duration'        => 'nullable|string|max:50',

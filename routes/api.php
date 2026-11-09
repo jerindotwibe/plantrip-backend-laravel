@@ -118,8 +118,14 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
 
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
 
-    // ── Dashboard ─────────────────────────────────────────────────────────────
-    Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+    // ── Dashboard & Utilities ────────────────────────────────────────────────
+    Route::get('/dashboard/stats',     [DashboardController::class, 'stats']);
+    Route::get('/notifications/count', [DashboardController::class, 'notificationsCount']);
+    Route::post('/upload',              [DashboardController::class, 'upload']);
+
+    // ── Admin Profile ─────────────────────────────────────────────────────────
+    Route::put('/profile',              [UserController::class, 'updateAdminProfile']);
+    Route::put('/profile/password',     [UserController::class, 'updateAdminPassword']);
 
     // ── Users ─────────────────────────────────────────────────────────────────
     Route::get('/users',        [UserController::class, 'index']);

@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class TourPackage extends Model
 {
     protected $fillable = [
-        'country_id', 'slug', 'title', 'subtitle', 'image', 'badge',
-        'duration', 'duration_days', 'duration_nights',
+        'country_id', 'destination_id', 'slug', 'title', 'subtitle', 'image', 'badge',
+        'duration', 'duration_days', 'duration_nights', 'description',
         'price', 'currency', 'includes', 'itinerary', 'highlights', 'terms', 'is_active', 'is_featured',
     ];
 
@@ -24,6 +24,11 @@ class TourPackage extends Model
     public function country()
     {
         return $this->belongsTo(Country::class);
+    }
+
+    public function destination()
+    {
+        return $this->belongsTo(Destination::class);
     }
 
     public function bookings()

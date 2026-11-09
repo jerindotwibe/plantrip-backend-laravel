@@ -27,4 +27,19 @@ class Destination extends Model
     {
         return $this->hasMany(DayTour::class);
     }
+
+    public function tourPackages()
+    {
+        return $this->hasMany(TourPackage::class);
+    }
+
+    public function hotels()
+    {
+        return $this->hasMany(Hotel::class);
+    }
+
+    public function transfers()
+    {
+        return $this->hasMany(Transfer::class);
+    }
 }

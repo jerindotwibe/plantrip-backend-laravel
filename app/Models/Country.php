@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Country extends Model
 {
     protected $fillable = [
-        'name', 'slug', 'flag', 'currency', 'hero_image',
+        'name', 'slug', 'flag', 'currency', 'currency_code', 'currency_symbol', 'hero_image',
         'hero_title', 'tagline', 'description',
         'tour_count', 'package_count', 'is_active',
     ];

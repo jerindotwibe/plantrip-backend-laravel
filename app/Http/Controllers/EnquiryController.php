@@ -47,8 +47,19 @@ class EnquiryController extends Controller
     {
         $query = Enquiry::orderBy('created_at', 'desc');
 
-        if ($request->has('status')) {
+        if ($request->filled('status')) {
             $query->where('status', $request->status);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('full_name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('destination', 'like', "%{$search}%")
+                  ->orWhere('country', 'like', "%{$search}%");
+            });
         }
 
         $perPage = $request->get('per_page', 15);

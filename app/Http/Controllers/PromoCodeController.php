@@ -65,13 +65,20 @@ class PromoCodeController extends Controller
     /** POST /api/admin/promo-codes */
     public function store(Request $request)
     {
+        if ($request->has('type') && !$request->has('discount_type')) {
+            $request->merge(['discount_type' => $request->type]);
+        }
+        if ($request->has('value') && !$request->has('discount_value')) {
+            $request->merge(['discount_value' => $request->value]);
+        }
+
         $validated = $request->validate([
             'code'           => 'required|string|max:50|unique:promo_codes',
             'discount_type'  => 'required|in:fixed,percentage',
             'discount_value' => 'required|numeric|min:0',
             'min_amount'     => 'nullable|numeric|min:0',
             'max_uses'       => 'nullable|integer|min:1',
-            'expires_at'     => 'nullable|date|after:today',
+            'expires_at'     => 'nullable|date',
             'is_active'      => 'boolean',
         ]);
 
@@ -85,7 +92,15 @@ class PromoCodeController extends Controller
     {
         $promo = PromoCode::findOrFail($id);
 
+        if ($request->has('type') && !$request->has('discount_type')) {
+            $request->merge(['discount_type' => $request->type]);
+        }
+        if ($request->has('value') && !$request->has('discount_value')) {
+            $request->merge(['discount_value' => $request->value]);
+        }
+
         $validated = $request->validate([
+            'code'           => 'sometimes|string|max:50|unique:promo_codes,code,' . $promo->id,
             'discount_type'  => 'sometimes|in:fixed,percentage',
             'discount_value' => 'sometimes|numeric|min:0',
             'min_amount'     => 'nullable|numeric|min:0',
@@ -93,6 +108,10 @@ class PromoCodeController extends Controller
             'expires_at'     => 'nullable|date',
             'is_active'      => 'boolean',
         ]);
+
+        if (isset($validated['code'])) {
+            $validated['code'] = strtoupper($validated['code']);
+        }
 
         $promo->update($validated);
         return response()->json(['message' => 'Promo code updated.', 'promo' => $promo]);

@@ -76,18 +76,37 @@ class UserController extends Controller
      * GET /api/admin/users
      * Return all users (admin only).
      */
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::orderBy('created_at', 'desc')->get()->map(function ($user) {
+        $query = User::orderBy('created_at', 'desc');
+
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('name', 'like', "%{$s}%")
+                  ->orWhere('email', 'like', "%{$s}%")
+                  ->orWhere('phone', 'like', "%{$s}%");
+            });
+        }
+
+        if ($request->filled('role') && $request->role !== 'All') {
+            $query->where('role', strtolower($request->role));
+        }
+
+        $users = $query->get()->map(function ($user) {
+            $role = $user->role ?: ($user->email === 'admin@plantriponline.com' ? 'Admin' : 'User');
+            $status = $user->status ?: 'Active';
+
             return [
                 'id'      => $user->id,
                 'name'    => $user->name,
                 'email'   => $user->email,
                 'phone'   => $user->phone,
                 'country' => $user->country,
-                'role'    => $user->email === 'admin@plantriponline.com' ? 'Admin' : 'User',
-                'status'  => 'Active',
+                'role'    => ucfirst($role),
+                'status'  => ucfirst($status),
                 'date'    => $user->created_at ? $user->created_at->format('Y-m-d') : 'N/A',
+                'created_at' => $user->created_at,
             ];
         });
 
@@ -101,6 +120,8 @@ class UserController extends Controller
     public function show($id)
     {
         $user = User::findOrFail($id);
+        $role = $user->role ?: ($user->email === 'admin@plantriponline.com' ? 'Admin' : 'User');
+        $status = $user->status ?: 'Active';
 
         return response()->json([
             'id'      => $user->id,
@@ -108,9 +129,10 @@ class UserController extends Controller
             'email'   => $user->email,
             'phone'   => $user->phone,
             'country' => $user->country,
-            'role'    => $user->email === 'admin@plantriponline.com' ? 'Admin' : 'User',
-            'status'  => 'Active',
+            'role'    => ucfirst($role),
+            'status'  => ucfirst($status),
             'date'    => $user->created_at ? $user->created_at->format('Y-m-d') : 'N/A',
+            'created_at' => $user->created_at,
         ]);
     }
 
@@ -124,13 +146,74 @@ class UserController extends Controller
 
         $validated = $request->validate([
             'name'    => 'sometimes|string|max:255',
-            'phone'   => 'sometimes|string|max:50',
-            'country' => 'sometimes|string|max:255',
+            'phone'   => 'sometimes|nullable|string|max:50',
+            'country' => 'sometimes|nullable|string|max:255',
+            'role'    => 'sometimes|string|max:50',
+            'status'  => 'sometimes|string|max:50',
         ]);
+
+        if (isset($validated['role'])) {
+            $validated['role'] = strtolower($validated['role']);
+        }
+        if (isset($validated['status'])) {
+            $validated['status'] = strtolower($validated['status']);
+        }
 
         $user->update($validated);
 
         return response()->json(['message' => 'User updated successfully.', 'user' => $user]);
+    }
+
+    /**
+     * PUT /api/admin/profile
+     * Update admin user profile name.
+     */
+    public function updateAdminProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $user->update($validated);
+
+        return response()->json([
+            'message' => 'Profile updated successfully.',
+            'user'    => $user,
+        ]);
+    }
+
+    /**
+     * PUT /api/admin/profile/password
+     * Update admin user password.
+     */
+    public function updateAdminPassword(Request $request)
+    {
+        $user = $request->user();
+
+        // Support either 'password' or 'new_password' as sent by frontend
+        if ($request->has('password') && !$request->has('new_password')) {
+            $request->merge(['new_password' => $request->password]);
+        }
+        if ($request->has('password_confirmation') && !$request->has('new_password_confirmation')) {
+            $request->merge(['new_password_confirmation' => $request->password_confirmation]);
+        }
+
+        $request->validate([
+            'current_password' => 'required|string',
+            'new_password'     => 'required|string|min:8|confirmed',
+        ]);
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json(['message' => 'The provided current password does not match.'], 422);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->new_password),
+        ]);
+
+        return response()->json(['message' => 'Password updated successfully.']);
     }
 
     /**

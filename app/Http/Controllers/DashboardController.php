@@ -4,7 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Booking;
 use App\Models\Country;
+use App\Models\DayTour;
 use App\Models\Enquiry;
+use App\Models\Hotel;
+use App\Models\Review;
+use App\Models\TourPackage;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -96,10 +100,14 @@ class DashboardController extends Controller
 
         return response()->json([
             'total_users'      => $totalUsers,
+            'total_bookings'   => Booking::count(),
             'active_bookings'  => $activeBookings,
             'total_revenue'    => round($totalRevenue, 2),
             'active_packages'  => $activePackages,
+            'active_hotels'    => Hotel::where('is_active', true)->count(),
+            'active_tours'     => DayTour::where('is_active', true)->count(),
             'pending_enquiries'=> $pendingEnquiries,
+            'pending_reviews'  => Review::where('status', 'pending')->count(),
             'revenue_chart'    => [
                 'labels' => $labels,
                 'data'   => $chartData,
@@ -107,6 +115,39 @@ class DashboardController extends Controller
             'recent_activity'  => $recentActivity,
             'recent_bookings'  => $recentBookingsTable,
             'countries_count'  => Country::where('is_active', true)->count(),
+        ]);
+    }
+
+    /**
+     * GET /api/admin/notifications/count
+     * Return pending counts for dashboard notification badge.
+     */
+    public function notificationsCount()
+    {
+        return response()->json([
+            'pending_bookings'  => Booking::where('status', 'pending')->count(),
+            'pending_enquiries' => Enquiry::where('status', 'pending')->count(),
+            'pending_reviews'   => Review::where('status', 'pending')->count(),
+        ]);
+    }
+
+    /**
+     * POST /api/admin/upload
+     * Store an uploaded file in public storage and return its public URL.
+     */
+    public function upload(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:jpeg,png,jpg,gif,webp,svg,pdf|max:10240',
+        ]);
+
+        $path = $request->file('file')->store('uploads', 'public');
+        $url = asset('storage/' . $path);
+
+        return response()->json([
+            'success' => true,
+            'url'     => $url,
+            'path'    => $path,
         ]);
     }
 }

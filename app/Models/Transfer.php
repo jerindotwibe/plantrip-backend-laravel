@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Transfer extends Model
 {
     protected $fillable = [
-        'country_id', 'slug', 'title', 'from_location', 'to_location',
+        'country_id', 'destination_id', 'slug', 'title', 'from_location', 'to_location',
         'duration', 'price', 'currency', 'image', 'vehicles', 'description', 'is_active',
     ];
 
@@ -20,5 +20,10 @@ class Transfer extends Model
     public function country()
     {
         return $this->belongsTo(Country::class);
+    }
+
+    public function destination()
+    {
+        return $this->belongsTo(Destination::class);
     }
 }

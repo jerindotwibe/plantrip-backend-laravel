@@ -17,6 +17,10 @@ class DestinationController extends Controller
         $query = Destination::where('is_active', true)
             ->with(['country:id,name,slug,currency']);
 
+        if ($request->filled('country_id')) {
+            $query->where('country_id', $request->country_id);
+        }
+
         if ($request->filled('country')) {
             $query->whereHas('country', function ($q) use ($request) {
                 $q->where('slug', $request->country)
@@ -86,7 +90,7 @@ class DestinationController extends Controller
             'country_id'      => 'required|exists:countries,id',
             'name'            => 'required|string|max:100',
             'slug'            => 'required|string|max:100|unique:destinations',
-            'image'           => 'nullable|string|url',
+            'image'           => 'nullable|string|max:500',
             'badge'           => 'nullable|string|max:50',
             'rating'          => 'nullable|numeric|min:0|max:5',
             'locations_count' => 'nullable|integer',
@@ -108,8 +112,10 @@ class DestinationController extends Controller
         $destination = Destination::findOrFail($id);
 
         $validated = $request->validate([
+            'country_id'      => 'sometimes|exists:countries,id',
             'name'            => 'sometimes|string|max:100',
-            'image'           => 'nullable|string|url',
+            'slug'            => 'sometimes|string|max:100|unique:destinations,slug,' . $destination->id,
+            'image'           => 'nullable|string|max:500',
             'badge'           => 'nullable|string|max:50',
             'rating'          => 'nullable|numeric|min:0|max:5',
             'locations_count' => 'nullable|integer',
